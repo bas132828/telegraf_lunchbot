@@ -4,21 +4,12 @@ const fetch = require("node-fetch");
 const helperText = require("./constants");
 const bot = new Telegraf(process.env.BOT_TOKEN);
 let fetchedLunches = null;
-const days = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-];
+const days = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 
 fetch("https://lunch-app-bot.herokuapp.com/")
-  .then((res) => res.text())
+  .then((res) => res.json())
   .then((data) => {
     fetchedLunches = data;
-    console.log(fetchedLunches);
   });
 bot.start((ctx) =>
   ctx.reply(
@@ -48,32 +39,31 @@ bot.action("btn_cafes", async (ctx) => {
     await ctx.replyWithHTML(
       "<b>Кафе</b>",
       Markup.inlineKeyboard([
-        [Markup.button.callback("Berlogovo", "btn_berrlogovo")],
-        [Markup.button.callback("Bar rush", "btn_barrush")],
-        [Markup.button.callback("Proplov", "btn_proplov")],
+        [Markup.button.callback("barrush", "btn_barrush")],
+        [Markup.button.callback("proplov", "btn_proplov")],
       ])
     );
   } catch (error) {}
 });
 
-bot.action("btn_berrlogovo", async (ctx) => {
-  const today = days[new Date().getDay() - 1];
-  let infoForToday = null;
-  await fetch(`https://lunch-app-bot.herokuapp.com/${today}`)
-    .then((res) => {
-      return res.json();
-    })
-    .then((data) => {
-      infoForToday = data;
-    });
-  try {
-    await ctx.replyWithHTML(`
-    сегодня на ланч: <b>${infoForToday.meal}</b>
-    `);
-  } catch (er) {
-    console.error(er.message);
-  }
-});
+const createCafeReply = (cafe) => {
+  return bot.action(`btn_${cafe}`, async (ctx) => {
+    const today = days[new Date().getDay() - 1];
+    if (!today) return ctx.replyWithHTML(`сегодня нет ланчей!`);
+    const infoForToday = fetchedLunches[cafe].find((el) => el.day === today);
+    try {
+      await ctx.replyWithHTML(`
+          сегодня на ланч: <b>${infoForToday.meal}</b>
+          бонусы: <b>${infoForToday.bonus}</b>
+          стоимость: <b>${infoForToday.price}</b>
+          `);
+    } catch (er) {
+      console.error(er.message);
+    }
+  });
+};
+createCafeReply("barrush");
+createCafeReply("proplov");
 
 bot.launch();
 
