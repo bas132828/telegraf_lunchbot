@@ -34,8 +34,35 @@ bot.command("lunch", async (ctx) => {
   }
 });
 
+bot.action("btn_weekday", async (ctx) => {
+  const today = new Date().getDay() - 1;
+  const cafesAndLunchesForToday = {};
+
+  for (cafe in fetchedLunches) {
+    cafesAndLunchesForToday[cafe] = fetchedLunches[cafe][today];
+  }
+
+  let html = "";
+  console.log(cafesAndLunchesForToday);
+  for (cafe in cafesAndLunchesForToday) {
+    let text = `
+    ${cafe}: ${cafesAndLunchesForToday[cafe]["meal"]}
+    бонус: ${cafesAndLunchesForToday[cafe]["bonus"]}
+    цена: ${cafesAndLunchesForToday[cafe]["price"]}
+    `;
+    html = html + text;
+  }
+  try {
+    await ctx.answerCbQuery();
+    await ctx.replyWithHTML(`<b>ланчи:</b>
+    ${html}
+    `);
+  } catch (error) {}
+});
+
 bot.action("btn_cafes", async (ctx) => {
   try {
+    await ctx.answerCbQuery();
     await ctx.replyWithHTML(
       "<b>Кафе</b>",
       Markup.inlineKeyboard([
@@ -46,12 +73,14 @@ bot.action("btn_cafes", async (ctx) => {
   } catch (error) {}
 });
 
-const createCafeReply = (cafe) => {
+function createCafeReply(cafe) {
   return bot.action(`btn_${cafe}`, async (ctx) => {
     const today = days[new Date().getDay() - 1];
+
     if (!today) return ctx.replyWithHTML(`сегодня нет ланчей!`);
     const infoForToday = fetchedLunches[cafe].find((el) => el.day === today);
     try {
+      await ctx.answerCbQuery();
       await ctx.replyWithHTML(`
           сегодня на ланч: <b>${infoForToday.meal}</b>
           бонусы: <b>${infoForToday.bonus}</b>
@@ -61,7 +90,7 @@ const createCafeReply = (cafe) => {
       console.error(er.message);
     }
   });
-};
+}
 createCafeReply("barrush");
 createCafeReply("proplov");
 
