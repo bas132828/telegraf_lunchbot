@@ -4,6 +4,7 @@ const fetch = require("node-fetch");
 const helperText = require("./constants");
 const bot = new Telegraf(process.env.BOT_TOKEN);
 let fetchedLunches = null;
+const MONDAY = 0;
 const days = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 
 fetch("https://lunch-app-bot.herokuapp.com/")
@@ -30,7 +31,7 @@ bot.command("lunch", async (ctx) => {
       ])
     );
   } catch (e) {
-    console.error(e.message);
+    console.error(e);
   }
 });
 
@@ -41,7 +42,6 @@ bot.action("btn_weekday", async (ctx) => {
   for (cafe in fetchedLunches) {
     cafesAndLunchesForToday[cafe] = fetchedLunches[cafe][today];
   }
-
   let html = "";
   console.log(cafesAndLunchesForToday);
   for (cafe in cafesAndLunchesForToday) {
@@ -57,7 +57,9 @@ bot.action("btn_weekday", async (ctx) => {
     await ctx.replyWithHTML(`<b>ланчи:</b>
     ${html}
     `);
-  } catch (error) {}
+  } catch (e) {
+    console.error(e);
+  }
 });
 
 bot.action("btn_cafes", async (ctx) => {
@@ -73,21 +75,36 @@ bot.action("btn_cafes", async (ctx) => {
   } catch (error) {}
 });
 
+const infoForTodayFn = (info) => {
+  const html = `
+    ланч: <b>${info.meal}</b>
+    бонусы: <b>${info.bonus}</b>
+    стоимость: <b>${info.price}</b>
+  `;
+  return html;
+};
+
 function createCafeReply(cafe) {
   return bot.action(`btn_${cafe}`, async (ctx) => {
-    const today = days[new Date().getDay() - 1];
+    let today = days[44 - 1];
 
-    if (!today) return ctx.replyWithHTML(`сегодня нет ланчей!`);
+    if (!today) {
+      today = days[MONDAY];
+      const infoForMonday = fetchedLunches[cafe].find((el) => el.day === today);
+      await ctx.answerCbQuery();
+      return ctx.replyWithHTML(
+        `Похоже, что сегодня нет ланчей. Ближайший ланч в понедельник: ${infoForTodayFn(
+          infoForMonday
+        )}`
+      );
+    }
+
     const infoForToday = fetchedLunches[cafe].find((el) => el.day === today);
     try {
       await ctx.answerCbQuery();
-      await ctx.replyWithHTML(`
-          сегодня на ланч: <b>${infoForToday.meal}</b>
-          бонусы: <b>${infoForToday.bonus}</b>
-          стоимость: <b>${infoForToday.price}</b>
-          `);
-    } catch (er) {
-      console.error(er.message);
+      await ctx.replyWithHTML(`${infoForTodayFn(infoForToday)}`);
+    } catch (e) {
+      console.error(e);
     }
   });
 }
