@@ -37,7 +37,7 @@ bot.command("lunch", async (ctx) => {
 
 bot.action("btn_weekday", async (ctx) => {
   let weekendFlag = false;
-  let today = 22 - 1;
+  let today = new Date().getDay() - 1;
   if (today > 4) {
     weekendFlag = true;
     today = MONDAY;
@@ -50,21 +50,20 @@ bot.action("btn_weekday", async (ctx) => {
   let html = "";
   for (cafe in cafesAndLunchesForToday) {
     let text = `
-    ${cafe}: ${cafesAndLunchesForToday[cafe]["meal"]}
-    бонус: ${cafesAndLunchesForToday[cafe]["bonus"]}
-    цена: ${cafesAndLunchesForToday[cafe]["price"]}
-    `;
+${cafe}: ${cafesAndLunchesForToday[cafe]["meal"]}
+бонус: ${cafesAndLunchesForToday[cafe]["bonus"]}
+цена: ${cafesAndLunchesForToday[cafe]["price"]}
+`;
     html += text;
   }
   try {
     await ctx.answerCbQuery();
     await ctx.replyWithHTML(`
-    ${
-      weekendFlag
-        ? "Похоже, сегодня нет ланчей. Ближайшие в понедельник, вот список:"
-        : "<b>ланчи:</b>"
-    }
-    ${html}
+${
+  weekendFlag
+    ? "Похоже, сегодня нет ланчей. Ближайшие в понеделник, вот список:"
+    : "<b>ланчи:</b>"
+}${html}
     `);
   } catch (e) {
     console.error(e);
@@ -81,17 +80,19 @@ bot.action("btn_cafes", async (ctx) => {
         [Markup.button.callback("proplov", "btn_proplov")],
       ])
     );
-  } catch (error) {}
+  } catch (e) {
+    console.error(e);
+  }
 });
 
-const infoForTodayFn = (info) => {
+function infoForTodayFn(info) {
   const html = `
-    ланч: <b>${info.meal}</b>
-    бонусы: <b>${info.bonus}</b>
-    стоимость: <b>${info.price}</b>
+${info.meal}
+бонусы: ${info.bonus}
+стоимость: ${info.price}
   `;
   return html;
-};
+}
 
 function createCafeReply(cafe) {
   return bot.action(`btn_${cafe}`, async (ctx) => {
@@ -101,17 +102,33 @@ function createCafeReply(cafe) {
       today = days[MONDAY];
       const infoForMonday = fetchedLunches[cafe].find((el) => el.day === today);
       await ctx.answerCbQuery();
-      return ctx.replyWithHTML(
-        `Похоже, что сегодня нет ланчей. Ближайший ланч в понедельник: ${infoForTodayFn(
-          infoForMonday
-        )}`
+
+      return bot.hears(
+        "photo",
+        ctx.replyWithPhoto(
+          { url: infoForMonday["url"] },
+          {
+            caption: `
+Похоже, что сегодня нет ланчей. Ближайший ланч в понедельник: 
+${infoForTodayFn(infoForMonday)}`,
+          }
+        )
       );
     }
 
     const infoForToday = fetchedLunches[cafe].find((el) => el.day === today);
     try {
       await ctx.answerCbQuery();
-      await ctx.replyWithHTML(`${infoForTodayFn(infoForToday)}`);
+      bot.hears(
+        "photo",
+        ctx.replyWithPhoto(
+          { url: infoForToday["url"] },
+          {
+            caption: `
+${infoForTodayFn(infoForToday)}`,
+          }
+        )
+      );
     } catch (e) {
       console.error(e);
     }
