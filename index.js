@@ -36,25 +36,34 @@ bot.command("lunch", async (ctx) => {
 });
 
 bot.action("btn_weekday", async (ctx) => {
-  const today = new Date().getDay() - 1;
+  let weekendFlag = false;
+  let today = 22 - 1;
+  if (today > 4) {
+    weekendFlag = true;
+    today = MONDAY;
+  }
   const cafesAndLunchesForToday = {};
 
   for (cafe in fetchedLunches) {
     cafesAndLunchesForToday[cafe] = fetchedLunches[cafe][today];
   }
   let html = "";
-  console.log(cafesAndLunchesForToday);
   for (cafe in cafesAndLunchesForToday) {
     let text = `
     ${cafe}: ${cafesAndLunchesForToday[cafe]["meal"]}
     бонус: ${cafesAndLunchesForToday[cafe]["bonus"]}
     цена: ${cafesAndLunchesForToday[cafe]["price"]}
     `;
-    html = html + text;
+    html += text;
   }
   try {
     await ctx.answerCbQuery();
-    await ctx.replyWithHTML(`<b>ланчи:</b>
+    await ctx.replyWithHTML(`
+    ${
+      weekendFlag
+        ? "Похоже, сегодня нет ланчей. Ближайшие в понедельник, вот список:"
+        : "<b>ланчи:</b>"
+    }
     ${html}
     `);
   } catch (e) {
@@ -86,7 +95,7 @@ const infoForTodayFn = (info) => {
 
 function createCafeReply(cafe) {
   return bot.action(`btn_${cafe}`, async (ctx) => {
-    let today = days[44 - 1];
+    const today = days[new Date().getDay() - 1];
 
     if (!today) {
       today = days[MONDAY];
