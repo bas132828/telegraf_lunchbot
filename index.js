@@ -8,6 +8,16 @@ const MONDAY = 0;
 const WORKING_DAYS_LENGTH = 4;
 const days = ["понедельник", "вторник", "среда", "четверг", "пятница"];
 
+// instantiate the calendar
+// const calendar = new Calendar(bot);
+
+// // listen for the selected date event
+// calendar.setDateListener((context, date) => context.reply(date));
+// // retreive the calendar HTML
+// bot.command("calendar", (context) =>
+//   context.reply("Here you are", calendar.getCalendar())
+// );
+
 fetch("https://lunch-app-bot.herokuapp.com/")
   .then((res) => res.json())
   .then((data) => {
@@ -49,7 +59,10 @@ bot.action("btn_tomorrow", async (ctx) => {
       "<b>Кафе</b>",
       Markup.inlineKeyboard([
         [
-          Markup.button.callback("По всем заведениям", "btn_weekday_tomorrow"),
+          Markup.button.callback(
+            "По всем заведениям завтра",
+            "btn_weekday_tomorrow"
+          ),
           Markup.button.callback("barrush на завтра", "btn_barrush_tomorrow"),
           Markup.button.callback("proplov на завтра", "btn_proplov_tomorrow"),
         ],
@@ -61,42 +74,6 @@ bot.action("btn_tomorrow", async (ctx) => {
 });
 
 //end tomorrow section
-bot.action("btn_weekday", async (ctx) => {
-  let weekendFlag = false;
-  let today = new Date().getDay() - 1;
-  if (today > WORKING_DAYS_LENGTH) {
-    weekendFlag = true;
-    today = MONDAY;
-  }
-  const cafesAndLunchesForToday = {};
-
-  for (cafe in fetchedLunches) {
-    cafesAndLunchesForToday[cafe] = fetchedLunches[cafe][today];
-  }
-  if (weekendFlag) {
-    await ctx.answerCbQuery();
-    await ctx.replyWithHTML(
-      "Похоже, сегодня нет ланчей. Ближайшие в понеделник, вот список:"
-    );
-  }
-  for (cafe in cafesAndLunchesForToday) {
-    let text = `
-день: ${cafesAndLunchesForToday[cafe]["day"]}
-${cafe}: ${cafesAndLunchesForToday[cafe]["meal"]}
-бонус: ${cafesAndLunchesForToday[cafe]["bonus"]}
-цена: ${cafesAndLunchesForToday[cafe]["price"]}
-`;
-    bot.hears(
-      "photo",
-      ctx.replyWithPhoto(
-        { url: cafesAndLunchesForToday[cafe]["url"] },
-        {
-          caption: `${text}`,
-        }
-      )
-    );
-  }
-});
 
 bot.action("btn_cafes", async (ctx) => {
   try {
@@ -116,6 +93,50 @@ bot.action("btn_cafes", async (ctx) => {
 });
 
 // service functions
+function createWeekDayReply(weekdayFromUser) {
+  const actionMarker = weekdayFromUser ?? "";
+  bot.action(`btn_weekday${actionMarker}`, async (ctx) => {
+    let weekendFlag = false;
+    let today;
+
+    if (!weekdayFromUser) today = new Date().getDay() - 1;
+    else if (weekdayFromUser === "_tomorrow") today = new Date().getDay();
+
+    if (today > WORKING_DAYS_LENGTH) {
+      weekendFlag = true;
+      today = MONDAY;
+    }
+    const cafesAndLunchesForToday = {};
+
+    for (cafe in fetchedLunches) {
+      cafesAndLunchesForToday[cafe] = fetchedLunches[cafe][today];
+    }
+    if (weekendFlag) {
+      await ctx.answerCbQuery();
+      await ctx.replyWithHTML(
+        "Похоже, сегодня нет ланчей. Ближайшие в понеделник, вот список:"
+      );
+    }
+    for (cafe in cafesAndLunchesForToday) {
+      let text = `
+  день: ${cafesAndLunchesForToday[cafe]["day"]}
+  ${cafe}: ${cafesAndLunchesForToday[cafe]["meal"]}
+  бонус: ${cafesAndLunchesForToday[cafe]["bonus"]}
+  цена: ${cafesAndLunchesForToday[cafe]["price"]}
+  `;
+      bot.hears(
+        "photo",
+        ctx.replyWithPhoto(
+          { url: cafesAndLunchesForToday[cafe]["url"] },
+          {
+            caption: `${text}`,
+          }
+        )
+      );
+    }
+  });
+}
+
 function infoForTodayFn(info) {
   const html = `
 день: ${info.day}
@@ -178,6 +199,8 @@ ${infoForTodayFn(infoForToday)}`,
 }
 
 //initialization
+createWeekDayReply();
+createWeekDayReply("_tomorrow");
 createCafeReply("barrush");
 createCafeReply("proplov");
 createCafeReply("barrush_tomorrow", "tomorrow");
