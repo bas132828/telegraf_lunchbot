@@ -7,14 +7,13 @@ let fetchedLunches = null;
 const MONDAY = 0;
 const WORKING_DAYS_LENGTH = 4;
 const days = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-// setTimeout(() => {
-//   console.log(fetchedLunches);
-// }, 500);
+
 fetch("https://lunch-app-bot.herokuapp.com/")
   .then((res) => res.json())
   .then((data) => {
     fetchedLunches = data;
   });
+//commands
 bot.start((ctx) =>
   ctx.reply(
     `Привет, ${
@@ -29,8 +28,10 @@ bot.command("lunch", async (ctx) => {
     await ctx.replyWithHTML(
       "<b>обеды</b>",
       Markup.inlineKeyboard([
-        [Markup.button.callback("По всем заведениям", "btn_weekday")],
-        [Markup.button.callback("Конкретное кафе", "btn_cafes")],
+        [
+          Markup.button.callback("По всем заведениям", "btn_weekday"),
+          Markup.button.callback("Конкретное кафе", "btn_cafes"),
+        ],
       ])
     );
   } catch (e) {
@@ -38,10 +39,10 @@ bot.command("lunch", async (ctx) => {
   }
 });
 
+//actions
 bot.action("btn_weekday", async (ctx) => {
   let weekendFlag = false;
   let today = new Date().getDay() - 1;
-  console.log(today);
   if (today > WORKING_DAYS_LENGTH) {
     weekendFlag = true;
     today = MONDAY;
@@ -51,10 +52,12 @@ bot.action("btn_weekday", async (ctx) => {
   for (cafe in fetchedLunches) {
     cafesAndLunchesForToday[cafe] = fetchedLunches[cafe][today];
   }
-  if (weekendFlag)
-    ctx.replyWithHTML(
+  if (weekendFlag) {
+    await ctx.answerCbQuery();
+    await ctx.replyWithHTML(
       "Похоже, сегодня нет ланчей. Ближайшие в понеделник, вот список:"
     );
+  }
   for (cafe in cafesAndLunchesForToday) {
     let text = `
 ${cafe}: ${cafesAndLunchesForToday[cafe]["meal"]}
@@ -71,20 +74,6 @@ ${cafe}: ${cafesAndLunchesForToday[cafe]["meal"]}
       )
     );
   }
-
-  // try {
-  // await ctx.answerCbQuery();
-
-  //     await ctx.replyWithHTML(`
-  // ${
-  //   weekendFlag
-  //     ? "Похоже, сегодня нет ланчей. Ближайшие в понеделник, вот список:"
-  //     : "<b>ланчи:</b>"
-  // }${html}
-  //     `);
-  //   } catch (e) {
-  //     console.error(e);
-  //   }
 });
 
 bot.action("btn_cafes", async (ctx) => {
@@ -93,8 +82,10 @@ bot.action("btn_cafes", async (ctx) => {
     await ctx.replyWithHTML(
       "<b>Кафе</b>",
       Markup.inlineKeyboard([
-        [Markup.button.callback("barrush", "btn_barrush")],
-        [Markup.button.callback("proplov", "btn_proplov")],
+        [
+          Markup.button.callback("barrush", "btn_barrush"),
+          Markup.button.callback("proplov", "btn_proplov"),
+        ],
       ])
     );
   } catch (e) {
@@ -102,6 +93,7 @@ bot.action("btn_cafes", async (ctx) => {
   }
 });
 
+// service functions
 function infoForTodayFn(info) {
   const html = `
 ${info.meal}
@@ -133,6 +125,7 @@ ${infoForTodayFn(infoForMonday)}`,
     }
 
     const infoForToday = fetchedLunches[cafe].find((el) => el.day === today);
+
     try {
       await ctx.answerCbQuery();
       bot.hears(
@@ -150,9 +143,10 @@ ${infoForTodayFn(infoForToday)}`,
     }
   });
 }
+
+//initialization
 createCafeReply("barrush");
 createCafeReply("proplov");
-
 bot.launch();
 
 // Enable graceful stop
