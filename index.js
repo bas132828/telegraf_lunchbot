@@ -5,8 +5,11 @@ const helperText = require("./constants");
 const bot = new Telegraf(process.env.BOT_TOKEN);
 let fetchedLunches = null;
 const MONDAY = 0;
+const WORKING_DAYS_LENGTH = 4;
 const days = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-
+// setTimeout(() => {
+//   console.log(fetchedLunches);
+// }, 500);
 fetch("https://lunch-app-bot.herokuapp.com/")
   .then((res) => res.json())
   .then((data) => {
@@ -38,7 +41,8 @@ bot.command("lunch", async (ctx) => {
 bot.action("btn_weekday", async (ctx) => {
   let weekendFlag = false;
   let today = new Date().getDay() - 1;
-  if (today > 4) {
+  console.log(today);
+  if (today > WORKING_DAYS_LENGTH) {
     weekendFlag = true;
     today = MONDAY;
   }
@@ -47,27 +51,40 @@ bot.action("btn_weekday", async (ctx) => {
   for (cafe in fetchedLunches) {
     cafesAndLunchesForToday[cafe] = fetchedLunches[cafe][today];
   }
-  let html = "";
+  if (weekendFlag)
+    ctx.replyWithHTML(
+      "Похоже, сегодня нет ланчей. Ближайшие в понеделник, вот список:"
+    );
   for (cafe in cafesAndLunchesForToday) {
     let text = `
 ${cafe}: ${cafesAndLunchesForToday[cafe]["meal"]}
 бонус: ${cafesAndLunchesForToday[cafe]["bonus"]}
 цена: ${cafesAndLunchesForToday[cafe]["price"]}
 `;
-    html += text;
+    bot.hears(
+      "photo",
+      ctx.replyWithPhoto(
+        { url: cafesAndLunchesForToday[cafe]["url"] },
+        {
+          caption: `${text}`,
+        }
+      )
+    );
   }
-  try {
-    await ctx.answerCbQuery();
-    await ctx.replyWithHTML(`
-${
-  weekendFlag
-    ? "Похоже, сегодня нет ланчей. Ближайшие в понеделник, вот список:"
-    : "<b>ланчи:</b>"
-}${html}
-    `);
-  } catch (e) {
-    console.error(e);
-  }
+
+  // try {
+  // await ctx.answerCbQuery();
+
+  //     await ctx.replyWithHTML(`
+  // ${
+  //   weekendFlag
+  //     ? "Похоже, сегодня нет ланчей. Ближайшие в понеделник, вот список:"
+  //     : "<b>ланчи:</b>"
+  // }${html}
+  //     `);
+  //   } catch (e) {
+  //     console.error(e);
+  //   }
 });
 
 bot.action("btn_cafes", async (ctx) => {
@@ -96,8 +113,7 @@ ${info.meal}
 
 function createCafeReply(cafe) {
   return bot.action(`btn_${cafe}`, async (ctx) => {
-    const today = days[new Date().getDay() - 1];
-
+    let today = days[new Date().getDay() - 1];
     if (!today) {
       today = days[MONDAY];
       const infoForMonday = fetchedLunches[cafe].find((el) => el.day === today);
