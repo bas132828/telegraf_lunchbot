@@ -6,7 +6,7 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 let fetchedLunches = null;
 const MONDAY = 0;
 const WORKING_DAYS_LENGTH = 4;
-const days = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+const days = ["понедельник", "вторник", "среда", "четверг", "пятница"];
 
 fetch("https://lunch-app-bot.herokuapp.com/")
   .then((res) => res.json())
@@ -31,6 +31,7 @@ bot.command("lunch", async (ctx) => {
         [
           Markup.button.callback("По всем заведениям", "btn_weekday"),
           Markup.button.callback("Конкретное кафе", "btn_cafes"),
+          Markup.button.callback("На завтра", "btn_tomorrow"),
         ],
       ])
     );
@@ -40,6 +41,26 @@ bot.command("lunch", async (ctx) => {
 });
 
 //actions
+//start tomorrow section
+bot.action("btn_tomorrow", async (ctx) => {
+  try {
+    await ctx.answerCbQuery();
+    await ctx.replyWithHTML(
+      "<b>Кафе</b>",
+      Markup.inlineKeyboard([
+        [
+          Markup.button.callback("По всем заведениям", "btn_weekday_tomorrow"),
+          Markup.button.callback("barrush на завтра", "btn_barrush_tomorrow"),
+          Markup.button.callback("proplov на завтра", "btn_proplov_tomorrow"),
+        ],
+      ])
+    );
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+//end tomorrow section
 bot.action("btn_weekday", async (ctx) => {
   let weekendFlag = false;
   let today = new Date().getDay() - 1;
@@ -60,6 +81,7 @@ bot.action("btn_weekday", async (ctx) => {
   }
   for (cafe in cafesAndLunchesForToday) {
     let text = `
+день: ${cafesAndLunchesForToday[cafe]["day"]}
 ${cafe}: ${cafesAndLunchesForToday[cafe]["meal"]}
 бонус: ${cafesAndLunchesForToday[cafe]["bonus"]}
 цена: ${cafesAndLunchesForToday[cafe]["price"]}
@@ -96,6 +118,7 @@ bot.action("btn_cafes", async (ctx) => {
 // service functions
 function infoForTodayFn(info) {
   const html = `
+день: ${info.day}
 ${info.meal}
 бонусы: ${info.bonus}
 стоимость: ${info.price}
@@ -103,12 +126,20 @@ ${info.meal}
   return html;
 }
 
-function createCafeReply(cafe) {
+function createCafeReply(cafe, dayFromUser) {
   return bot.action(`btn_${cafe}`, async (ctx) => {
-    let today = days[new Date().getDay() - 1];
+    //маркер tomorrow мешает поиску по базе. убираем, если есть.
+    const cafeToFind = cafe.includes("_") ? cafe.split("_")[0] : cafe;
+    let today;
+
+    if (!dayFromUser) today = days[new Date().getDay() - 1];
+    else if (dayFromUser === "tomorrow") today = days[new Date().getDay()];
+    else today = dayFromUser;
     if (!today) {
       today = days[MONDAY];
-      const infoForMonday = fetchedLunches[cafe].find((el) => el.day === today);
+      let infoForMonday = fetchedLunches[cafeToFind].find(
+        (el) => el.day === today
+      );
       await ctx.answerCbQuery();
 
       return bot.hears(
@@ -124,7 +155,9 @@ ${infoForTodayFn(infoForMonday)}`,
       );
     }
 
-    const infoForToday = fetchedLunches[cafe].find((el) => el.day === today);
+    const infoForToday = fetchedLunches[cafeToFind].find(
+      (el) => el.day === today
+    );
 
     try {
       await ctx.answerCbQuery();
@@ -147,6 +180,8 @@ ${infoForTodayFn(infoForToday)}`,
 //initialization
 createCafeReply("barrush");
 createCafeReply("proplov");
+createCafeReply("barrush_tomorrow", "tomorrow");
+createCafeReply("proplov_tomorrow", "tomorrow");
 bot.launch();
 
 // Enable graceful stop
