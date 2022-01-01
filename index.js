@@ -9,14 +9,6 @@ const WORKING_DAYS_LENGTH = 4;
 const days = ["понедельник", "вторник", "среда", "четверг", "пятница"];
 
 // instantiate the calendar
-// const calendar = new Calendar(bot);
-
-// // listen for the selected date event
-// calendar.setDateListener((context, date) => context.reply(date));
-// // retreive the calendar HTML
-// bot.command("calendar", (context) =>
-//   context.reply("Here you are", calendar.getCalendar())
-// );
 
 fetch("https://lunch-app-bot.herokuapp.com/")
   .then((res) => res.json())
