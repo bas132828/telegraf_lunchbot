@@ -97,6 +97,7 @@ function createWeekDayReply(weekdayFromUser) {
   const actionMarker = weekdayFromUser ?? "";
   bot.action(`btn_weekday${actionMarker}`, async (ctx) => {
     let weekendFlag = false;
+
     let today;
 
     if (!weekdayFromUser) today = new Date().getDay() - 1;
@@ -108,14 +109,18 @@ function createWeekDayReply(weekdayFromUser) {
     }
     const cafesAndLunchesForToday = {};
 
+    let dateMarker;
+    if (weekdayFromUser === "_tomorrow") dateMarker = "завтра";
+    else if (weekendFlag) dateMarker = "в выходные";
+    else dateMarker = "сегодня";
+
+    const headerFroWeekend = `Похоже, ${dateMarker} нет ланчей. Ближайшие в понедельник, вот список:`;
     for (cafe in fetchedLunches) {
       cafesAndLunchesForToday[cafe] = fetchedLunches[cafe][today];
     }
     if (weekendFlag) {
       await ctx.answerCbQuery();
-      await ctx.replyWithHTML(
-        "Похоже, сегодня нет ланчей. Ближайшие в понеделник, вот список:"
-      );
+      await ctx.replyWithHTML(headerFroWeekend);
     }
     for (cafe in cafesAndLunchesForToday) {
       let text = `
@@ -161,6 +166,12 @@ function createCafeReply(cafe, dayFromUser) {
       let infoForMonday = fetchedLunches[cafeToFind].find(
         (el) => el.day === today
       );
+
+      let dateMarker;
+      if (dayFromUser === "tomorrow") dateMarker = "завтра";
+      else if (dayFromUser) dateMarker = "в выходные";
+      else dayFromUser = "сегодня";
+
       await ctx.answerCbQuery();
 
       return bot.hears(
@@ -169,7 +180,7 @@ function createCafeReply(cafe, dayFromUser) {
           { url: infoForMonday["url"] },
           {
             caption: `
-Похоже, что сегодня нет ланчей. Ближайший ланч в понедельник: 
+Похоже, что ${dateMarker} нет ланчей. Ближайший ланч в понедельник: 
 ${infoForTodayFn(infoForMonday)}`,
           }
         )
