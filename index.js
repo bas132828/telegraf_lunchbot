@@ -16,6 +16,9 @@ const days = [
   "суббота",
 ];
 const buttonsArray = [];
+const buttonsForTomorrowArray = [
+  Markup.button.callback("По всем заведениям завтра", "btn_weekday_tomorrow"),
+];
 
 fetch("https://lunch-app-bot.herokuapp.com/")
   .then((res) => res.json())
@@ -36,6 +39,10 @@ fetch("https://lunch-app-bot.herokuapp.com/")
   .then(() => {
     let tempArr = [];
     for (cafe in fetchedLunches) {
+      buttonsForTomorrowArray.push(
+        Markup.button.callback(`${cafe} на завтра`, `btn_${cafe}_tomorrow`)
+      );
+
       if (tempArr.length < 2) {
         tempArr.push(Markup.button.callback(cafe, `btn_${cafe}`));
       }
@@ -86,16 +93,7 @@ bot.action("btn_tomorrow", async (ctx) => {
     await ctx.answerCbQuery();
     await ctx.replyWithHTML(
       "<b>Кафе</b>",
-      Markup.inlineKeyboard([
-        [
-          Markup.button.callback(
-            "По всем заведениям завтра",
-            "btn_weekday_tomorrow"
-          ),
-          Markup.button.callback("barrush на завтра", "btn_barrush_tomorrow"),
-          Markup.button.callback("proplov на завтра", "btn_proplov_tomorrow"),
-        ],
-      ])
+      Markup.inlineKeyboard([buttonsForTomorrowArray])
     );
   } catch (e) {
     console.error(e);
