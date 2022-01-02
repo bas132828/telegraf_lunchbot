@@ -4,9 +4,17 @@ const fetch = require("node-fetch");
 const helperText = require("./constants");
 const bot = new Telegraf(process.env.BOT_TOKEN);
 let fetchedLunches;
-const MONDAY = 0;
+const MONDAY = 1;
 const WORKING_DAYS_LENGTH = 4;
-const days = ["понедельник", "вторник", "среда", "четверг", "пятница"];
+const days = [
+  "воскресение",
+  "понедельник",
+  "вторник",
+  "среда",
+  "четверг",
+  "пятница",
+  "суббота",
+];
 const buttonsArray = [];
 
 fetch("https://lunch-app-bot.herokuapp.com/")
@@ -111,12 +119,12 @@ function createWeekDayReply(weekdayFromUser) {
 
     let today;
 
-    if (!weekdayFromUser) today = new Date().getDay() - 1;
-    else if (weekdayFromUser === "_tomorrow") today = new Date().getDay();
-
-    if (today > WORKING_DAYS_LENGTH) {
+    if (!weekdayFromUser) today = new Date().getDay();
+    else if (weekdayFromUser === "_tomorrow")
+      today = new Date().getDay() < 7 ? new Date().getDay() + 1 : 0;
+    if (today === 0 || today === 6) {
       weekendFlag = true;
-      today = MONDAY;
+      today = 0;
     }
     const cafesAndLunchesForToday = {};
 
@@ -169,16 +177,17 @@ function createCafeReply(cafe, dayFromUser) {
     const cafeToFind = cafe.includes("_") ? cafe.split("_")[0] : cafe;
     let today;
 
-    if (!dayFromUser) today = days[new Date().getDay() - 1];
-    else if (dayFromUser === "tomorrow") today = days[new Date().getDay()];
+    if (!dayFromUser) today = days[new Date().getDay()];
+    else if (dayFromUser === "tomorrow")
+      today = days[new Date().getDay() < 7 ? new Date().getDay() + 1 : 0];
     else today = dayFromUser;
 
     let dateMarker;
     if (dayFromUser === "tomorrow") dateMarker = "завтра";
     else if (dayFromUser) dateMarker = "в выходные";
     else dateMarker = "сегодня";
-
-    if (!today) {
+    console.log(today);
+    if (today === "воскресение" || today === "суббота") {
       today = days[MONDAY];
       let infoForMonday = fetchedLunches[cafeToFind].find(
         (el) => el.day === today
