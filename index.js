@@ -5,7 +5,6 @@ const helperText = require("./constants");
 const bot = new Telegraf(process.env.BOT_TOKEN);
 let fetchedLunches;
 const MONDAY = 1;
-const WORKING_DAYS_LENGTH = 4;
 const days = [
   "воскресение",
   "понедельник",
@@ -15,6 +14,7 @@ const days = [
   "пятница",
   "суббота",
 ];
+const arrayOfCafesForInit = [];
 const buttonsArray = [];
 const buttonsForTomorrowArray = [
   Markup.button.callback("По всем заведениям завтра", "btn_weekday_tomorrow"),
@@ -27,7 +27,6 @@ fetch("https://lunch-app-bot.herokuapp.com/")
   })
   .then(() => {
     //specific cafes initialization
-    const arrayOfCafesForInit = [];
     for (cafe in fetchedLunches) {
       arrayOfCafesForInit.push(cafe);
     }
@@ -61,6 +60,7 @@ fetch("https://lunch-app-bot.herokuapp.com/")
   });
 
 //commands
+
 bot.start((ctx) =>
   ctx.reply(
     `Привет, ${
@@ -75,11 +75,10 @@ bot.command("lunch", async (ctx) => {
     await ctx.replyWithHTML(
       "<b>обеды в Тамбове</b>",
       Markup.inlineKeyboard([
-        [
-          Markup.button.callback("По всем заведениям", "btn_weekday"),
-          Markup.button.callback("Конкретное кафе", "btn_cafes"),
-          Markup.button.callback("На завтра", "btn_tomorrow"),
-        ],
+        [Markup.button.callback("По всем заведениям", "btn_weekday")],
+        [Markup.button.callback("Конкретное кафе", "btn_cafes")],
+        [Markup.button.callback("На завтра", "btn_tomorrow")],
+        [Markup.button.callback("Случайный ланч!", "btn_random")],
       ])
     );
   } catch (e) {
@@ -99,6 +98,44 @@ bot.action("btn_tomorrow", async (ctx) => {
     console.error(e);
   }
 });
+
+bot.action("btn_random", async (ctx) =>
+  ctx.replyWithDice({ emoji: "🎲" }).then((res) => {
+    let weekend = false;
+    let todaysIndex = new Date().getDay();
+    let today = days[todaysIndex];
+    if (today === "суббота" || today === "воскресение") {
+      today = "понедельник";
+      todaysIndex = 1;
+      weekend = true;
+    }
+    const randomCafe =
+      arrayOfCafesForInit[res.dice.value % arrayOfCafesForInit.length];
+    const randomLunch = fetchedLunches[randomCafe][todaysIndex];
+
+    let text = `
+${randomLunch["meal"]}
+бонус: ${randomLunch["bonus"]}
+цена: ${randomLunch["price"]}
+`;
+    if (weekend)
+      ctx.replyWithHTML(
+        "Сегодня выходной. Но в понедельник кости подсказывают идти в ..."
+      );
+    setTimeout(() => {
+      ctx.replyWithHTML(`${randomCafe}`);
+      bot.hears(
+        "photo",
+        ctx.replyWithPhoto(
+          { url: randomLunch.url },
+          {
+            caption: `${text}`,
+          }
+        )
+      );
+    }, 2000);
+  })
+);
 
 bot.action("btn_cafes", async (ctx) => {
   try {
@@ -184,7 +221,6 @@ function createCafeReply(cafe, dayFromUser) {
     if (dayFromUser === "tomorrow") dateMarker = "завтра";
     else if (dayFromUser) dateMarker = "в выходные";
     else dateMarker = "сегодня";
-    console.log(today);
     if (today === "воскресение" || today === "суббота") {
       today = days[MONDAY];
       let infoForMonday = fetchedLunches[cafeToFind].find(
