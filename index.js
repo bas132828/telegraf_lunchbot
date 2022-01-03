@@ -59,13 +59,24 @@ fetch("https://lunch-app-bot.herokuapp.com/")
 
 //commands
 
-bot.start((ctx) =>
-  ctx.reply(
-    `Привет, ${
-      ctx.message.from.first_name ? ctx.message.from.first_name : "анонимус"
-    }!`
-  )
-);
+bot.start((ctx) => {
+  ctx.replyWithHTML(
+    "<b>обеды в Тамбове</b>",
+    Markup.keyboard(
+      [
+        [
+          Markup.button.callback("По всем заведениям", "btn_weekday"),
+          Markup.button.callback("Конкретное кафе", "btn_cafes"),
+        ],
+        [
+          Markup.button.callback("На завтра", "btn_tomorrow"),
+          Markup.button.callback("Случайный ланч!", "btn_random"),
+        ],
+      ],
+      { resize_keyboard: true }
+    )
+  );
+});
 bot.help((ctx) => ctx.reply(helperText.commands));
 
 bot.command("lunch", async (ctx) => {
@@ -77,7 +88,6 @@ bot.command("lunch", async (ctx) => {
           Markup.button.callback("По всем заведениям", "btn_weekday"),
           Markup.button.callback("Конкретное кафе", "btn_cafes"),
         ],
-
         [
           Markup.button.callback("На завтра", "btn_tomorrow"),
           Markup.button.callback("Случайный ланч!", "btn_random"),
@@ -88,7 +98,25 @@ bot.command("lunch", async (ctx) => {
     console.error(e);
   }
 });
-
+bot.command("feedback", async (ctx) => {
+  try {
+    await ctx.replyWithHTML(
+      "<b>для обратной связи пишите боту:</b>",
+      Markup.inlineKeyboard([
+        [Markup.button.callback("бот обратной связи", "btn_feedback")],
+      ])
+    );
+  } catch (e) {
+    console.error(e);
+  }
+});
+bot.action("btn_feedback", async (ctx) => {
+  try {
+    ctx.replyWithHTML("<b>контакт: <a href='https://google.com/'>link</a></b>");
+  } catch (error) {
+    console.error(error);
+  }
+});
 //actions
 bot.hears("На завтра", async (ctx) => {
   try {
@@ -136,7 +164,7 @@ ${randomLunch["meal"]}
           }
         )
       );
-    }, 2000);
+    }, 2200);
   })
 );
 
@@ -154,11 +182,8 @@ function createWeekDayReply(weekdayFromUser) {
   bot.hears(`По всем заведениям${actionMarker}`, async (ctx) => {
     let weekendFlag = false;
 
-    let today;
+    let today = new Date().getDay();
 
-    if (!weekdayFromUser) today = new Date().getDay();
-    else if (weekdayFromUser === " на завтра")
-      today = new Date().getDay() < 7 ? new Date().getDay() + 1 : 0;
     if (today === 0 || today === 6) {
       weekendFlag = true;
       today = 0;
@@ -166,6 +191,7 @@ function createWeekDayReply(weekdayFromUser) {
     const cafesAndLunchesForToday = {};
 
     let dateMarker;
+
     if (weekdayFromUser === " на завтра") dateMarker = "завтра";
     else if (weekendFlag) dateMarker = "в выходные";
     else dateMarker = "сегодня";
@@ -266,7 +292,6 @@ ${infoForTodayFn(infoForToday)}`,
 
 //initialization
 createWeekDayReply();
-createWeekDayReply(" на завтра");
 bot.launch();
 
 // Enable graceful stop
