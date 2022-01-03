@@ -16,9 +16,7 @@ const days = [
 ];
 const arrayOfCafesForInit = [];
 const buttonsArray = [];
-const buttonsForTomorrowArray = [
-  Markup.button.callback("По всем заведениям завтра", "btn_weekday_tomorrow"),
-];
+const buttonsForTomorrowArray = [];
 
 fetch("https://lunch-app-bot.herokuapp.com/")
   .then((res) => res.json())
@@ -74,11 +72,16 @@ bot.command("lunch", async (ctx) => {
   try {
     await ctx.replyWithHTML(
       "<b>обеды в Тамбове</b>",
-      Markup.inlineKeyboard([
-        [Markup.button.callback("По всем заведениям", "btn_weekday")],
-        [Markup.button.callback("Конкретное кафе", "btn_cafes")],
-        [Markup.button.callback("На завтра", "btn_tomorrow")],
-        [Markup.button.callback("Случайный ланч!", "btn_random")],
+      Markup.keyboard([
+        [
+          Markup.button.callback("По всем заведениям", "btn_weekday"),
+          Markup.button.callback("Конкретное кафе", "btn_cafes"),
+        ],
+
+        [
+          Markup.button.callback("На завтра", "btn_tomorrow"),
+          Markup.button.callback("Случайный ланч!", "btn_random"),
+        ],
       ])
     );
   } catch (e) {
@@ -87,9 +90,9 @@ bot.command("lunch", async (ctx) => {
 });
 
 //actions
-bot.action("btn_tomorrow", async (ctx) => {
+bot.hears("На завтра", async (ctx) => {
   try {
-    await ctx.answerCbQuery();
+    // await ctx.answerCbQuery();
     await ctx.replyWithHTML(
       "<b>Кафе</b>",
       Markup.inlineKeyboard([buttonsForTomorrowArray])
@@ -99,7 +102,7 @@ bot.action("btn_tomorrow", async (ctx) => {
   }
 });
 
-bot.action("btn_random", async (ctx) =>
+bot.hears("Случайный ланч!", async (ctx) =>
   ctx.replyWithDice({ emoji: "🎲" }).then((res) => {
     let weekend = false;
     let todaysIndex = new Date().getDay();
@@ -111,7 +114,7 @@ bot.action("btn_random", async (ctx) =>
     }
     const randomCafe =
       arrayOfCafesForInit[res.dice.value % arrayOfCafesForInit.length];
-    const randomLunch = fetchedLunches[randomCafe][todaysIndex];
+    const randomLunch = fetchedLunches[randomCafe][todaysIndex - 1];
 
     let text = `
 ${randomLunch["meal"]}
@@ -137,9 +140,8 @@ ${randomLunch["meal"]}
   })
 );
 
-bot.action("btn_cafes", async (ctx) => {
+bot.hears("Конкретное кафе", async (ctx) => {
   try {
-    await ctx.answerCbQuery();
     await ctx.replyWithHTML("<b>Кафе</b>", Markup.inlineKeyboard(buttonsArray));
   } catch (e) {
     console.error(e);
@@ -149,13 +151,13 @@ bot.action("btn_cafes", async (ctx) => {
 // service functions
 function createWeekDayReply(weekdayFromUser) {
   const actionMarker = weekdayFromUser ?? "";
-  bot.action(`btn_weekday${actionMarker}`, async (ctx) => {
+  bot.hears(`По всем заведениям${actionMarker}`, async (ctx) => {
     let weekendFlag = false;
 
     let today;
 
     if (!weekdayFromUser) today = new Date().getDay();
-    else if (weekdayFromUser === "_tomorrow")
+    else if (weekdayFromUser === " на завтра")
       today = new Date().getDay() < 7 ? new Date().getDay() + 1 : 0;
     if (today === 0 || today === 6) {
       weekendFlag = true;
@@ -164,24 +166,22 @@ function createWeekDayReply(weekdayFromUser) {
     const cafesAndLunchesForToday = {};
 
     let dateMarker;
-    if (weekdayFromUser === "_tomorrow") dateMarker = "завтра";
+    if (weekdayFromUser === " на завтра") dateMarker = "завтра";
     else if (weekendFlag) dateMarker = "в выходные";
     else dateMarker = "сегодня";
-
-    const headerFroWeekend = `Похоже, ${dateMarker} нет ланчей. Ближайшие в понедельник, вот список:`;
+    const headerForWeekend = `Похоже, ${dateMarker} нет ланчей. Ближайшие в понедельник, вот список:`;
     for (cafe in fetchedLunches) {
-      cafesAndLunchesForToday[cafe] = fetchedLunches[cafe][today];
+      cafesAndLunchesForToday[cafe] = fetchedLunches[cafe][today - 1];
     }
     if (weekendFlag) {
-      await ctx.answerCbQuery();
-      await ctx.replyWithHTML(headerFroWeekend);
+      await ctx.replyWithHTML(headerForWeekend);
     }
     for (cafe in cafesAndLunchesForToday) {
       let text = `
-  день: ${cafesAndLunchesForToday[cafe]["day"]}
-  ${cafe}: ${cafesAndLunchesForToday[cafe]["meal"]}
-  бонус: ${cafesAndLunchesForToday[cafe]["bonus"]}
-  цена: ${cafesAndLunchesForToday[cafe]["price"]}
+${cafe}, ${cafesAndLunchesForToday[cafe]["day"]}
+${cafesAndLunchesForToday[cafe]["meal"]}
+бонус: ${cafesAndLunchesForToday[cafe]["bonus"]}
+цена: ${cafesAndLunchesForToday[cafe]["price"]}
   `;
       bot.hears(
         "photo",
@@ -266,7 +266,7 @@ ${infoForTodayFn(infoForToday)}`,
 
 //initialization
 createWeekDayReply();
-createWeekDayReply("_tomorrow");
+createWeekDayReply(" на завтра");
 bot.launch();
 
 // Enable graceful stop
