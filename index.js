@@ -21,29 +21,6 @@ const buttonsForTomorrowArray = [];
 const express = require("express");
 const app = express();
 const port = 8080;
-// const lunches = require("./lunches.json");
-// const mongoose = require("mongoose");
-// const db =
-//   "mongodb+srv://andrei:Serezha2012@cluster0.npzoy.mongodb.net/lunches_bot?retryWrites=true&w=majority";
-// const Post = require("./models/post");
-
-// mongoose
-//   .connect(db, { useNewUrlParser: true, useUnifiedTopology: true })
-//   .then((res) => {
-//     console.log("connected to db");
-//   })
-//   .catch((er) => console.log(er));
-
-// app.get("/", (req, res) => {
-//   res.send(lunches);
-// });
-// app.get("/:day", (req, res) => {
-//   const requestedDay = req.url.substring(1);
-//   const lunchToSend =
-//     lunches.barrush.find((el) => el.day === requestedDay) ||
-//     "bad request, go eat at home";
-//   res.send(lunchToSend);
-// });
 
 fetch("https://lunch-app-bot.herokuapp.com/")
   .then((res) => res.json())
